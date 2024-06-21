@@ -8,6 +8,7 @@ class Linea {
   this.velocidad = velocidad;
   this.angulo = 0;
   this.rotando = false;
+  this.rotacionInicial = random(TWO_PI); // Rotación inicial aleatoria
   this.opacidad = 255; // Opacidad inicial
  }
 
@@ -36,6 +37,7 @@ class Linea {
   capa.translate(this.x + this.w / 2, this.y + this.h / 2);
   this.rotar();
   capa.rotate(this.angulo);
+  capa.rotate(this.angulo + this.rotacionInicial); // Aplicar rotación inicial aleatoria
   capa.tint(255, this.opacidad); // Aplicar opacidad
   capa.image(this.img, -this.w / 2, -this.h / 2, this.w, this.h);
   capa.pop();
