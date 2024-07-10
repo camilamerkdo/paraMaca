@@ -246,7 +246,7 @@ let manchaG = [], manchaN = [], lineas = [];
 let tiempoDentroCapa = 0;
 let tiempoAnterior = 0;
 let capaActual = "";
-let limiteImagenes = 5;
+let limiteImagenes = 4; // Limitar a 4 imágenes para pruebas
 let manchasG = [], manchasN = [], manchasLineas = [];
 let estado = "";
 let tiempoRotacion = 500; // milisegundos o segundos
@@ -265,6 +265,7 @@ let amortiguacion = 0.9;
 
 let tiempoInicioSonido = 0; // Variable para registrar el inicio del sonido
 let duracionSonido = 0; // Variable para registrar la duración del sonido
+let distanciaMinima = 50; // Distancia mínima entre manchas
 
 function preload() {
   fondo = loadImage("data/Lienzo2.png"); // Cargar la imagen de fondo
@@ -301,30 +302,40 @@ function setup() {
 }
 
 function inicializarManchasG() {
-  let marginLeft = -30; // 30 píxeles fuera del canvas por el lado izquierdo
-  let marginRight = 300; // Margen derecho dentro del canvas
-  let marginTop = 0; // Margen superior dentro del canvas
-  let marginBottom = 100; // Margen inferior dentro del canvas
-
   for (let i = 0; i < limiteImagenes; i++) {
-    let idx = floor(random(cant));
-    let w = random(250, 350); // Ancho entre 250 y 350
-    let h = random(250, 350); // Alto entre 250 y 350
-    let x = random(marginLeft, width - marginRight);
-    let y = random(marginTop, height - marginBottom);
-    let velocidad = 0; // Sin rotación
-
-    // Nueva manchaG con parametros generados aleatoriamente
-    let nuevaMancha = new ManchaG(manchaG[idx], x, y, w, h, velocidad);
-    nuevaMancha.opacidad = 255; // Aparecer con opacidad completa
-    nuevaMancha.apareciendo = false; // No aparecer progresivamente
-    manchasG.push(nuevaMancha);
-
-    // Dibujar la mancha en CapamanchaG
-    nuevaMancha.dibujar(CapamanchaG);
+    agregarManchaG();
   }
 }
 
+function agregarManchaG() {
+  let idx = floor(random(cant));
+  let w = random(250, 350); // Ancho entre 250 y 350
+  let h = random(250, 350); // Alto entre 250 y 350
+  let x, y;
+  let validPosition = false;
+
+  while (!validPosition) {
+    x = random(0, width - w);
+    y = random(0, height - h);
+    validPosition = true;
+
+    for (let mancha of manchasG) {
+      if (dist(x, y, mancha.x, mancha.y) < distanciaMinima) {
+        validPosition = false;
+        break;
+      }
+    }
+  }
+
+  let velocidad = 0; // Sin rotación
+  let nuevaMancha = new ManchaG(manchaG[idx], x, y, w, h, velocidad);
+  nuevaMancha.opacidad = 255; // Aparecer con opacidad completa
+  nuevaMancha.apareciendo = false; // No aparecer progresivamente
+  manchasG.push(nuevaMancha);
+
+  // Dibujar la mancha en CapamanchaG
+  nuevaMancha.dibujar(CapamanchaG);
+}
 
 function startAudio() {
   audioContext = getAudioContext();
@@ -353,7 +364,7 @@ function draw() {
 
   // Manejar las manchas para cada capa
   if (capaActual === "N") {
-    manejarAparicionManchas(manchasN, ManchaN, manchaN, 250, 450); // Manejar la aparición de manchas negras
+    manejarAparicionManchas(manchasN, ManchaN, manchaN, 200, 350); // Manejar la aparición de manchas negras
     manejarRotacionManchas(manchasN); // Manejar la rotación de manchas negras
   } else if (capaActual === "L") {
     manejarAparicionManchas(manchasLineas, Linea, lineas, 200, 250); // Manejar la aparición de líneas
@@ -403,24 +414,84 @@ function actualizarCapa(tiempoTranscurrido) {
     });
   }
 }
+/*
+function manejarAparicionManchas(manchas, ClaseMancha, imagenes, minSize, maxSize) {
+  if (haySonido && !antesHabiaSonido && manchas.length < limiteImagenes) {
+    let i = floor(random(cant));
+    let w = random(minSize, maxSize);
+    let h = random(minSize, maxSize);
+    let x, y;
+    let validPosition = false;
+
+    while (!validPosition) {
+      x = random(0, width - w);
+      y = random(0, height - h);
+      validPosition = true;
+
+      for (let mancha of manchas) {
+        if (dist(x, y, mancha.x, mancha.y) < distanciaMinima) {
+          validPosition = false;
+          break;
+        }
+      }
+    }
+
+    let velocidad = random(0.05, 0.25); // Velocidades
+    let nuevaMancha = new ClaseMancha(imagenes[i], x, y, w, h, velocidad);
+    nuevaMancha.rotacionInicial = random(TWO_PI); // Rotación inicial aleatoria
+    nuevaMancha.apareciendo = true; // Marcar como apareciendo
+    nuevaMancha.opacidad = 0; // Empezar con opacidad 0
+    nuevaMancha.tiempoCreacion = millis(); // Registrar el tiempo de creación
+    manchas.push(nuevaMancha);
+  }
+}
+*/
 
 function manejarAparicionManchas(manchas, ClaseMancha, imagenes, minSize, maxSize) {
   if (haySonido && !antesHabiaSonido && manchas.length < limiteImagenes) {
     let i = floor(random(cant));
     let w = random(minSize, maxSize);
     let h = random(minSize, maxSize);
-    let marginRight = 0; // 30 px del lado derecho
-    let marginBottom = 0; // 30 px de abajo
-    let x = random(0, width - w - marginRight); // Posición x aleatoria con margen derecho
-    let y = random(0, height - h - marginBottom); // Posición y aleatoria con margen abajo
+    let x, y;
+    let validPosition = false;
+
+    while (!validPosition) {
+      x = random(0, width - w);
+      y = random(0, height - h);
+
+      // Verifica si hay suficiente distancia con otras manchas
+      function tieneSuficienteDistancia(x, y) {
+        for (let mancha of manchas) {
+          if (dist(x, y, mancha.x, mancha.y) < 100) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      // Busca una posicion valida
+      while (!tieneSuficienteDistancia(x, y)) {
+        x += 5; // Incrementa x en 10 píxeles
+        if (x > width - w) {
+          x = random(0, width - w); // Reinicia x si supera el ancho
+          y += 5; // Incrementa y en 10 píxeles si x se reinicia
+        }
+      }
+
+      validPosition = true;
+      console.log("Bucle while anda");
+    }
+
     let velocidad = random(0.05, 0.25); // Velocidades
     let nuevaMancha = new ClaseMancha(imagenes[i], x, y, w, h, velocidad);
     nuevaMancha.rotacionInicial = random(TWO_PI); // Rotación inicial aleatoria
     nuevaMancha.apareciendo = true; // Marcar como apareciendo
     nuevaMancha.opacidad = 0; // Empezar con opacidad 0
+    nuevaMancha.tiempoCreacion = millis(); // Registrar el tiempo de creación
     manchas.push(nuevaMancha);
   }
 }
+
 
 function manejarRotacionManchas(manchas) {
   if (manchas.length >= limiteImagenes && tiempoDentroCapa >= tiempoRotacion) {
